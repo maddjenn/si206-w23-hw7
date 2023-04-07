@@ -1,7 +1,7 @@
 
-# Your name:
-# Your student id:
-# Your email:
+# Your name: Madison Jennings
+# Your student id: 48980758
+# Your email: maddjenn@umich.edu
 # List who you have worked with on this project:
 
 import unittest
