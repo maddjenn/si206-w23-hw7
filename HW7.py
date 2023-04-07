@@ -53,7 +53,22 @@ def make_positions_table(data, cur, conn):
 #     created for you -- see make_positions_table above for details.
 
 def make_players_table(data, cur, conn):
-    pass
+
+    cur.execute('CREATE TABLE IF NOT EXISTS Players (id INTEGER PRIMARY KEY, name TEXT, position_id INTEGER, birthyear INTEGER, nationality TEXT)')
+    
+    players = data.get('squad', [])
+    cur.execute('CREATE TABLE IF NOT EXISTS Players (id INTEGER PRIMARY KEY, name TEXT, position_id INTEGER, birthyear INTEGER, nationality TEXT)')
+    for player in players:
+        player_id = int(player.get('id', 0))
+        name = player.get('name', '')
+        position = player.get('position', '')
+        birth_year = int(player.get('dateOfBirth', '')[:4]) if player.get('dateOfBirth') else None
+        nationality = player.get('nationality', '')
+        cur.execute('SELECT id FROM Positions WHERE position = ?', (position,))
+        position_id = int(cur.fetchone()[0]) if cur.fetchone() else None
+        cur.execute('INSERT OR IGNORE INTO Players (id, name, position_id, birthyear, nationality) VALUES (?, ?, ?, ?, ?)', (player_id, name, position_id, birth_year, nationality))
+    conn.commit()
+
 
 ## [TASK 2]: 10 points
 # Finish the function nationality_search
@@ -66,7 +81,12 @@ def make_players_table(data, cur, conn):
         # the player's name, their position_id, and their nationality.
 
 def nationality_search(countries, cur, conn):
-    pass
+    players = []
+    for country in countries:
+        cur.execute('SELECT name, position_id, nationality FROM Players WHERE nationality = ?', (country,))
+        players += cur.fetchall()
+    conn.commit()
+    return players
 
 ## [TASK 3]: 10 points
 # finish the function birthyear_nationality_search
@@ -85,7 +105,11 @@ def nationality_search(countries, cur, conn):
 
 
 def birthyear_nationality_search(age, country, cur, conn):
-    pass
+    birth_year = 2023 - age
+    cur.execute('SELECT name, nationality, birthyear FROM Players WHERE nationality = ? AND birthyear < ?', (country, birth_year))
+    players = cur.fetchall()
+    conn.commit()
+    return players
 
 ## [TASK 4]: 15 points
 # finish the function position_birth_search
