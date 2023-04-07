@@ -178,13 +178,31 @@ return players
 #     the passed year. 
 
 def make_winners_table(data, cur, conn):
-    pass
-
+    cur.execute("CREATE TABLE Winners (id INTEGER PRIMARY KEY, name TEXT)")
+    for team in data["teams"]:
+        cur.execute("INSERT INTO Winners (id, name) VALUES (?, ?)", (team["id"], team["name"]))
+    
 def make_seasons_table(data, cur, conn):
-    pass
+    cur.execute("CREATE TABLE Seasons (id INTEGER PRIMARY KEY, winner_id INTEGER, end_year INTEGER)")
+
+    winners = {team["name"]: team["id"] for team in data["teams"]}
+    for season in data["seasons"]:
+        if "winner" in season:
+            winner_id = winners.get(season["winner"])
+            if winner_id:
+                cur.execute("INSERT INTO Seasons (id, winner_id, end_year) VALUES (?, ?, ?)",
+                            (season["id"], winner_id, season["endYear"]))
+
 
 def winners_since_search(year, cur, conn):
-    pass
+    cur.execute("""
+                SELECT Winners.name, COUNT(*) 
+                FROM Seasons 
+                JOIN Winners ON Seasons.winner_id = Winners.id 
+                WHERE end_year >= ? 
+                GROUP BY Winners.name
+                """, (year,))
+    return row
 
 
 class TestAllMethods(unittest.TestCase):
@@ -242,14 +260,36 @@ class TestAllMethods(unittest.TestCase):
     def test_make_winners_table(self):
         self.cur2.execute('SELECT * from Winners')
         winners_list = self.cur2.fetchall()
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
 
-        pass
+    data = {"teams": [{"id": 1, "name": "Manchester United"}, {"id": 2, "name": "Arsenal"}]}
+    make_winners_table(data, cur, conn)
+
+    cur.execute("SELECT * FROM Winners")
+    rows = cur.fetchall()
+    assert len(rows) == 2
+    assert rows[0] == (1, "Manchester United")
+    assert rows[1] == (2, "Arsenal")
 
     def test_make_seasons_table(self):
         self.cur2.execute('SELECT * from Seasons')
         seasons_list = self.cur2.fetchall()
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
 
-        pass
+    data = {"teams": [{"id": 1, "name": "Manchester United"}, {"id": 2, "name": "Arsenal"}],
+            "seasons": [{"id": 1, "endYear": 2000, "winner": "Manchester United"},
+                        {"id": 2, "endYear": 2001, "winner": "Arsenal"},
+                        {"id": 3, "endYear": 2002}]}
+    make_winners_table(data, cur, conn)
+    make_seasons_table(data, cur, conn)
+
+    cur.execute("SELECT * FROM Seasons")
+    rows = cur.fetchall()
+    assert len(rows) == 2
+    assert rows[0] == (1, 1, 2000)
+    assert rows[1] == (2, 2, 2001)
 
     def test_winners_since_search(self):
 
